@@ -1,6 +1,7 @@
 ﻿using Catalog.API.Data;
 using Catalog.API.Entities;
 using MongoDB.Driver;
+using System.Xml.Linq;
 
 namespace Catalog.API.Repositories
 {
@@ -12,14 +13,20 @@ namespace Catalog.API.Repositories
         {
             _catalogContext = catalogContext;
         }
-        public Task CreateProduct(Product product)
+        public async Task CreateProduct(Product product)
         {
-            throw new NotImplementedException();
+             await _catalogContext.Products.InsertOneAsync(product);
         }
 
-        public Task DeleteProduct(string productId)
+        public async Task<bool> DeleteProduct(string productId)
         {
-            throw new NotImplementedException();
+            FilterDefinition<Product> filter = Builders<Product> .Filter.Eq(p=>p.Id, productId);
+
+            DeleteResult deleteResult = await _catalogContext
+                                                    .Products
+                                                    .DeleteOneAsync(filter);
+            return deleteResult.IsAcknowledged
+                                & deleteResult.DeletedCount > 0;
         }
 
         public async Task<IEnumerable<Product>> GetAllProducts()
@@ -30,14 +37,19 @@ namespace Catalog.API.Repositories
                      .ToListAsync();
         }
 
-        public Task<IEnumerable<Product>> GetProductByCategory(string categoryName)
+        public async Task<IEnumerable<Product>> GetProductByCategory(string categoryName)
         {
-            throw new NotImplementedException();
+            FilterDefinition<Product> filter = Builders<Product>.Filter.Eq(p => p.Name, categoryName);
+
+            return await _catalogContext
+                            .Products
+                            .Find(filter)
+                            .ToListAsync();
         }
 
         public async Task<IEnumerable<Product>> GetProductByName(string name)
         {
-            FilterDefinition<Product> filter = Builders<Product>.Filter.ElemMatch(p => p.Name, name);
+            FilterDefinition<Product> filter = Builders<Product>.Filter.Eq(p => p.Name, name);
 
             return await _catalogContext
                             .Products
@@ -53,9 +65,14 @@ namespace Catalog.API.Repositories
                             .FirstOrDefaultAsync();
         }
 
-        public Task<bool> UpdateProduct(Product product)
+        public async Task<bool> UpdateProduct(Product product)
         {
-            throw new NotImplementedException();
+            var updateProduct = await _catalogContext
+                                            .Products
+                                            .ReplaceOneAsync(g => g.Id == product.Id, product);
+
+            return updateProduct.IsAcknowledged 
+                                && updateProduct.ModifiedCount > 0;
         }
     }
 }
